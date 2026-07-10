@@ -1022,8 +1022,182 @@ void main() {
 
 **บันทึกผลการทดลอง: บันทึกโค้ดคำสั่งที่ได้**
 ```dart
-// บันทึกโค้ดในส่วนนี้
+abstract class Vehicle {
+  double _fuelInTank = 0;
+  double get fuelEfficiency;
+  double get fuelInTank => _fuelInTank;
 
+  void refuel(double liters) {
+    if (liters <= 0) return;
+    _fuelInTank += liters;
+    print("⛽ เติมน้ำมัน $liters ลิตร (มีน้ำมันทั้งหมด ${_fuelInTank.toStringAsFixed(2)} ลิตร)");
+  }
+
+  void drive(double km) {
+    double fuelNeeded = km / fuelEfficiency;
+    if (fuelNeeded > _fuelInTank) {
+      print("❌ น้ำมันไม่พอสำหรับขับระยะทาง $km กม. (ต้องการ $fuelNeeded ลิตร แต่มี $_fuelInTank ลิตร)");
+      return;
+    }
+    _fuelInTank -= fuelNeeded;
+    print("🚗 ขับรถเป็นระยะทาง $km กม. (ใช้น้ำมันไป ${fuelNeeded.toStringAsFixed(2)} ลิตร, เหลือ ${_fuelInTank.toStringAsFixed(2)} ลิตร)");
+  }
+}
+
+class Car extends Vehicle {
+  @override
+  double get fuelEfficiency => 15.0; 
+}
+
+class Truck extends Vehicle {
+  @override
+  double get fuelEfficiency => 8.0; 
+}
+
+mixin Discountable {
+  double calculateDiscount(double price, double percent) {
+    return price * (percent / 100);
+  }
+}
+
+class Product with Discountable {
+  final String name;
+  double price;
+
+  Product({required this.name, required this.price});
+
+  void applyDiscount(double percent) {
+    double discount = calculateDiscount(price, percent);
+    price -= discount;
+    print("🏷️ ลดราคา $percent% ($discount บาท) ของ $name -> ราคาใหม่: $price บาท");
+  }
+}
+
+class BankAccount {
+  final String ownerName;
+  double _balance;
+  List<String> _history = [];
+
+  BankAccount({required this.ownerName, double initial = 0}) : _balance = initial;
+
+  double get balance => _balance;
+  List<String> get history => List.unmodifiable(_history);
+
+  bool deposit(double amount) {
+    if (amount <= 0) {
+      print("❌ จำนวนเงินต้องมากกว่า 0");
+      return false;
+    }
+    _balance += amount;
+    _history.add("+ ฝาก ${amount.toStringAsFixed(2)} บาท (ยอดคงเหลือ: ${_balance.toStringAsFixed(2)})");
+    print("✅ ฝาก ${amount.toStringAsFixed(2)} บาท สำเร็จ");
+    return true;
+  }
+
+  bool withdraw(double amount) {
+    if (amount <= 0) {
+      print("❌ จำนวนเงินต้องมากกว่า 0");
+      return false;
+    }
+    if (amount > _balance) {
+      print("❌ ยอดเงินไม่เพียงพอ (มี ${_balance.toStringAsFixed(2)} บาท)");
+      return false;
+    }
+    _balance -= amount;
+    _history.add("- ถอน ${amount.toStringAsFixed(2)} บาท (ยอดคงเหลือ: ${_balance.toStringAsFixed(2)})");
+    print("✅ ถอน ${amount.toStringAsFixed(2)} บาท สำเร็จ");
+    return true;
+  }
+
+  void printStatement() {
+    print("\n=== สรุปบัญชี: $ownerName ===");
+    print("ยอดปัจจุบัน: ${_balance.toStringAsFixed(2)} บาท");
+    print("ประวัติรายการ:");
+    if (_history.isEmpty) {
+      print("  (ยังไม่มีรายการ)");
+    } else {
+      _history.forEach((h) => print("  $h"));
+    }
+  }
+
+  @override
+  String toString() => "BankAccount(${ownerName}, ยอด: ${_balance.toStringAsFixed(2)})";
+}
+
+class SavingsAccount extends BankAccount {
+  final double interestRate;
+
+  SavingsAccount({
+    required String ownerName,
+    required this.interestRate,
+    double initial = 0,
+  }) : super(ownerName: ownerName, initial: initial);
+
+  @override
+  bool withdraw(double amount) {
+    if (_balance - amount < 500) {
+      print("❌ บัญชีออมทรัพย์ต้องมียอดขั้นต่ำ 500 บาท");
+      return false;
+    }
+    return super.withdraw(amount);
+  }
+
+  void applyMonthlyInterest() {
+    double interest = _balance * interestRate / 12;
+    _balance += interest;
+    _history.add("+ ดอกเบี้ยรายเดือน ${interest.toStringAsFixed(2)} บาท");
+    print("✅ ดอกเบี้ยเดือนนี้: ${interest.toStringAsFixed(2)} บาท");
+  }
+}
+
+class CheckingAccount extends BankAccount {
+  final double overdraftLimit = 500.0;
+  final double overdraftFee = 50.0;
+
+  CheckingAccount({required String ownerName, double initial = 0})
+      : super(ownerName: ownerName, initial: initial);
+
+  @override
+  bool withdraw(double amount) {
+    if (amount <= 0) {
+      print("❌ จำนวนเงินต้องมากกว่า 0");
+      return false;
+    }
+    
+    if (amount <= _balance) {
+      return super.withdraw(amount);
+    } else if (amount <= _balance + overdraftLimit) {
+      double totalDeduction = amount + overdraftFee;
+      _balance -= totalDeduction;
+      _history.add("- ถอนเงินเกินบัญชี (Overdraft) $amount บาท + ค่าธรรมเนียม $overdraftFee บาท (ยอดคงเหลือ: ${_balance.toStringAsFixed(2)})");
+      print("✅ ถอนเงินเกินบัญชี $amount บาท สำเร็จ (คิดค่าธรรมเนียม $overdraftFee บาท)");
+      return true;
+    } else {
+      print("❌ ถอนเงินล้มเหลว: เกินวงเงิน Overdraft $overdraftLimit บาท");
+      return false;
+    }
+  }
+}
+
+void main() {
+  print("=== ทดสอบ CheckingAccount (โจทย์ 1) ===");
+  var checking = CheckingAccount(ownerName: "สมหมาย", initial: 1000);
+  checking.withdraw(800); 
+  checking.withdraw(500); 
+  checking.withdraw(300); 
+  checking.printStatement();
+
+  print("\n=== ทดสอบ Vehicle (โจทย์ 2) ===");
+  Vehicle myCar = Car();
+  print("รถยนต์ประหยัดน้ำมัน: ${myCar.fuelEfficiency} กม./ลิตร");
+  myCar.refuel(20);
+  myCar.drive(150);
+  myCar.drive(200);
+
+  print("\n=== ทดสอบ Mixin Discountable (โจทย์ 3) ===");
+  var product = Product(name: "Laptop", price: 30000);
+  product.applyDiscount(10);
+}
 
 ```
 ---
@@ -1257,9 +1431,9 @@ void main() async {
 
 ```
 บันทึกผลการทดลอง:
-Sequential ใช้เวลา: _______ ms
-Parallel ใช้เวลา:   _______ ms
-ประหยัดเวลาได้:     _______ ms (_______ %)
+Sequential ใช้เวลา: 3483 ms
+Parallel ใช้เวลา:   997 ms
+ประหยัดเวลาได้:     2486 ms (71.38 %)
 ```
 
 ---
@@ -1323,8 +1497,87 @@ void main() async {
 
 **บันทึกผลการทดลอง: บันทึกโค้ดคำสั่งที่ได้**
 ```dart
-// บันทึกโค้ดในส่วนนี้
+import 'dart:async';
 
+Stream<double> simulateStockPrice(String symbol) async* {
+  double price = 100.0;
+  int ticks = 0;
+
+  while (ticks < 5) {
+    await Future.delayed(Duration(milliseconds: 500));
+    double change = (ticks % 2 == 0) ? 2.5 : -1.5;
+    price += change;
+    ticks++;
+    yield price;
+  }
+}
+
+Future<double> calculateTax(double income) async {
+  await Future.delayed(Duration(milliseconds: 500));
+  if (income <= 150000) {
+    return 0.0;
+  } else if (income <= 300000) {
+    return (income - 150000) * 0.05;
+  } else if (income <= 500000) {
+    return (150000 * 0.05) + ((income - 300000) * 0.10);
+  } else {
+    return (150000 * 0.05) + (200000 * 0.10) + ((income - 500000) * 0.20);
+  }
+}
+
+Stream<String> simulateChatMessage() async* {
+  List<String> messages = [
+    "สวัสดีค่ะ มีใครอยู่ไหมคะ?",
+    "กำลังศึกษาเรื่อง Async ใน Dart อยู่พอดีเลยค่ะ",
+    "ใช้ Stream ส่งข้อมูลทีละนิดสะดวกมากค่ะ",
+    "ใกล้จะส่งข้อความครบ 5 ครั้งแล้วนะคะ",
+    "ข้อความสุดท้ายแล้ว บ๊ายบายค่ะ!"
+  ];
+
+  for (var msg in messages) {
+    await Future.delayed(Duration(seconds: 1));
+    yield msg;
+  }
+}
+
+void main() async {
+  print("=== ราคาหุ้น (Stream) ===");
+  print("Symbol: DART\n");
+
+  double? lastPrice;
+
+  await for (double price in simulateStockPrice("DART")) {
+    String direction = "";
+    if (lastPrice != null) {
+      direction = price > lastPrice ? "📈 ขึ้น" : "📉 ลง";
+    }
+    print("ราคา: ${price.toStringAsFixed(2)} บาท  $direction");
+    lastPrice = price;
+  }
+
+  print("\nสิ้นสุดการแสดงราคา");
+
+  print("\n=== ระบบคำนวณภาษีอัตราก้าวหน้า (Parallel) ===");
+  List<double> incomes = [250000, 450000, 750000];
+
+  var taxResults = await Future.wait([
+    calculateTax(incomes[0]),
+    calculateTax(incomes[1]),
+    calculateTax(incomes[2]),
+  ]);
+
+  double totalTax = 0;
+  for (int i = 0; i < incomes.length; i++) {
+    print("รายได้: ${incomes[i].toStringAsFixed(2)} บาท -> ภาษีที่ต้องจ่าย: ${taxResults[i].toStringAsFixed(2)} บาท");
+    totalTax += taxResults[i];
+  }
+  print("รวมภาษีทั้งหมด: ${totalTax.toStringAsFixed(2)} บาท\n");
+
+  print("=== ระบบจำลองข้อความแชต (Stream ทุก 1 วินาที) ===");
+  await for (String message in simulateChatMessage()) {
+    print(message);
+  }
+}
 
 ```
 ---
