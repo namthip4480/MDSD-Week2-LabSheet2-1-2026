@@ -627,8 +627,56 @@ void main() {
 
 **บันทึกผลการทดลอง: บันทึกโค้ดคำสั่งที่ได้**
 ```dart
-// บันทึกโค้ดในส่วนนี้
+void main() {
+  List<Map<String, dynamic>> students = [
+    {"name": "สมชาย",  "gpa": 3.75, "year": 3, "faculty": "วิศวกรรม"},
+    {"name": "สมหญิง", "gpa": 2.50, "year": 1, "faculty": "วิทยาศาสตร์"},
+    {"name": "สมศักดิ์","gpa": 3.10, "year": 2, "faculty": "วิศวกรรม"},
+    {"name": "สมใจ",  "gpa": 1.80, "year": 4, "faculty": "บริหาร"},
+    {"name": "สมpong", "gpa": 3.50, "year": 2, "faculty": "วิทยาศาสตร์"},
+    {"name": "สมศรี", "gpa": 2.90, "year": 3, "faculty": "บริหาร"},
+  ];
 
+  print("=== ค้นหานักศึกษาที่ GPA สูงสุดตามคณะ ===");
+  String targetFaculty = "วิศวกรรม";
+  String topStudent = findTopStudentByFaculty(students, targetFaculty);
+  print("นักศึกษาที่ GPA สูงสุดในคณะ $targetFaculty คือ: $topStudent");
+
+  print("\n=== การจัดกลุ่มนักศึกษาตามคณะ ===");
+  Map<String, List<Map<String, dynamic>>> groupedData = groupByFaculty(students);
+  groupedData.forEach((faculty, list) {
+    print("คณะ $faculty: ${list.map((s) => s["name"]).toList()}");
+  });
+
+  print("\n=== นักศึกษาที่มี GPA สูงสุด 3 อันดับแรก ===");
+  students.sort((b, a) => (a["gpa"] as double).compareTo(b["gpa"] as double));
+  var topThree = students.take(3);
+  for (var s in topThree) {
+    print("${s["name"]} (${s["faculty"]}) GPA: ${s["gpa"]}");
+  }
+}
+
+String findTopStudentByFaculty(List<Map<String, dynamic>> students, String faculty) {
+  var facultyStudents = students.where((s) => s["faculty"] == faculty);
+  if (facultyStudents.isEmpty) return "ไม่พบนักศึกษาในคณะนี้";
+  
+  var topStudent = facultyStudents.reduce((current, next) => 
+    (current["gpa"] as double) > (next["gpa"] as double) ? current : next
+  );
+  return "${topStudent["name"]} (${topStudent["gpa"]})";
+}
+
+Map<String, List<Map<String, dynamic>>> groupByFaculty(List<Map<String, dynamic>> students) {
+  Map<String, List<Map<String, dynamic>>> result = {};
+  for (var s in students) {
+    String faculty = s["faculty"];
+    if (!result.containsKey(faculty)) {
+      result[faculty] = [];
+    }
+    result[faculty]!.add(s);
+  }
+  return result;
+}
 
 ```
 ---
